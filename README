@@ -1,0 +1,50 @@
+331CA Paris Cristian-Tanase
+
+In main:
+	In main, pe langa variabilele care erau deja declare, am mai adaugat
+vectorul de thread-uri, vectorul de argumente, bariera (pe care o vom trimite
+ca referinta) si am mutat aici totodata si vectorii current_gen si next_gen,
+deoarece nu ne dorim ca fiecare thread sa creeze dinamic si sa aloce/dezaloce
+memorie de fiecare data, deoarece am ajunge la un rezultat gresit. Ne dorim
+ca toate sa lucreze in cadrul unei probleme comune, deci pe aceleasi array-uri.
+
+	Dupa initializarea variabilelor, pasam la crearea fiecarui thread o refe-
+rinta la o structura cu argumente necesare, in care includem si adresele de memo-
+rie ale vectorilor de mai sus si a barierei, care va fi vizibila pentru toate
+thread-urile.
+
+	La final, asteptam ca toate thread-urile sa termine si dezalocam tot.
+
+In run_genetic_algorithm:
+	Castam structura cu argumente din void * la tipul cerut si apoi initializam
+toate thread-urile cu datele necesare. De notat este ca dupa acest pas am adaugat
+o bariera, pentru a ne asigura ca niciun thread nu incepe algoritmul inaintea
+celorlalte, deoarece initializarea se face in mod paralel, fiecare thread avand o
+parte din vector. Daca un thread s-ar apuca de algoritm inainte de celelalte, 
+am avea rezultate eronate si race condition-uri. For-ul care itereaza peste numarul
+de generatii nu se poate paraleliza, deoarece fiecare thread depinde de generatiile
+din urma pentru a crea generatiile viitoare.
+	Dupa primul apel a functiei de fitness, adaugam o bariera pentru a ne
+asigura ca sortarea (care se va face de catre un singur thread, qsort neffind
+paralelizat), va avea array-ul cu toate datele actualizate. Dupa apelul de sortare
+am mai adaugat o bariera, deoarece se poate intampla ca unele thread-uri sa fie
+mai rapide si astfel sa se apuce de celelalte operatii inainte ca thread-ul 0 sa
+termine de sortat generatia curenta, lucru care ar duce, din nou, la race
+condition-uri si rezultate eronate.
+	Toate celelalte operatii din for-urile interne au fost paralelizate dupa
+modelul de la laborator, pe intervale. La finalul buclei externe, fix inainte de
+pasul de printare, am mai adaugat o bariera, care ne asigura ca fiecare thread a
+terminat toate operatiile din cadrul generatiei sale, inainte de a trece la
+urmatoarea. Totodata, are rolul de sincronizare si pentru ultimul calcul al
+fitness-ului indivizilor. 
+	De notat este ca printarile au fost facute de fiecare data de catre un
+singur thread, pentru a obtine rezultatele corecte.
+	Alt lucru important este ca pentru a obtine speed-ul cerut, a trebuit sa
+optimizam functia de comparare, care calcula, in mod ineficient, de fiecare data
+numarul de obiecte din rucsac la fiecare comparatie dintre obiecte. Pentru a evita
+"o complexitate suplimentara de O(n)" la fiecare comparatie, in individual.h am mai
+adaugat structurii inca un camp, care are rolul de a retine numarul de obiecte dintr-un
+rucsac, si care este actualizat de fiecare data cand este rulata functia de
+compute_fitness. Astfel, overall, sortarea se face in O(nlogn) in loc de O(n^2logn).
+In functia de compare vom interoga direct, in O(1) numarul de obiecte.
+
